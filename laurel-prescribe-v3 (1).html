@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laurel Prescribe v2 — Expert Tip Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F4F1EC;--card:#FFF;--dark:#1C1917;--border:#E5DDD5;
+  --green:#4A7C59;--green-bg:#EBF4EE;
+  --gold:#C9A84C;--gold-bg:#FEF9E4;
+  --mid:#7A726A;--light:#FAF8F5;
+  --premium:#7A5B9E;--premium-bg:#F0EAF8;
+  --red:#B94040;--coral:#C9614A;
+  --sent:#9CA3AF;--sent-bg:#F3F4F6;
+  --new:#3B82F6;--new-bg:#EFF6FF;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh}
+.header{background:var(--dark);padding:24px 24px 20px;text-align:center;position:sticky;top:0;z-index:10}
+.header-sub{font-size:10px;letter-spacing:.25em;color:#9A9088;margin-bottom:6px}
+.header-title{font-family:'Cormorant Garamond',serif;font-size:28px;color:#fff;font-style:italic}
+.header-desc{font-size:12px;color:#9A9088;margin-top:6px}
+.version-badge{display:inline-block;font-size:9px;background:var(--premium);color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;letter-spacing:1px}
+.content{max-width:780px;margin:0 auto;padding:20px 16px 100px}
+.section{background:var(--card);border-radius:14px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+.section-hdr{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--light)}
+.section-num{width:24px;height:24px;background:var(--dark);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-title{font-size:14px;font-weight:700}
+.section-count{font-size:10px;color:var(--mid);margin-left:auto}
+.section-body{padding:14px 16px}
+
+/* 검색 영역 */
+.search-section{background:linear-gradient(135deg,var(--premium-bg) 0%,#fff 100%);border:1.5px solid var(--premium)}
+.search-section .section-num{background:var(--premium)}
+.search-row{display:grid;grid-template-columns:120px 1fr auto;gap:8px;margin-bottom:10px}
+.search-row select,.search-row input{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:#fff;color:var(--dark);outline:none}
+.search-row input:focus{border-color:var(--premium)}
+.btn-search{padding:10px 20px;background:var(--premium);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-search:active{opacity:.85}
+.btn-search:disabled{opacity:.5;cursor:not-allowed}
+.search-results{margin-top:12px;max-height:400px;overflow-y:auto}
+.search-result-item{padding:12px;background:#fff;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.search-result-item:hover{border-color:var(--premium);background:var(--premium-bg)}
+.search-result-item.premium-sent{background:var(--sent-bg);border-color:var(--sent);opacity:.7}
+.search-result-item.premium-sent:hover{opacity:1}
+.result-meta{font-size:11px;color:var(--mid);margin-top:4px}
+.result-name{font-weight:700;font-size:14px}
+.result-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.result-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--light);color:var(--mid)}
+.result-tag.sent{background:var(--sent-bg);color:var(--mid);border:1px solid var(--sent)}
+.result-tag.new{background:var(--new-bg);color:var(--new);border:1px solid var(--new);font-weight:700}
+.result-tag.premium{background:var(--premium-bg);color:var(--premium);border:1px solid var(--premium);font-weight:700}
+.search-status{font-size:12px;color:var(--mid);text-align:center;padding:8px;font-style:italic}
+
+/* 선택된 고객 카드 */
+.selected-customer{background:linear-gradient(135deg,var(--gold-bg) 0%,#fff 100%);border:2px solid var(--gold);padding:14px;border-radius:10px;margin-bottom:14px;display:none}
+.selected-customer.visible{display:block}
+.selected-customer .sc-title{font-size:10px;color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:6px}
+.selected-customer .sc-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.selected-customer .sc-info{font-size:12px;color:var(--mid);line-height:1.6}
+.btn-clear-customer{float:right;padding:4px 10px;background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer}
+
+/* 폼 영역 */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+label{font-size:10px;font-weight:700;color:var(--mid);letter-spacing:.06em}
+input,select,textarea{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--dark);outline:none;-webkit-appearance:none}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+input:focus,select:focus,textarea:focus{border-color:var(--green);background:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--dark)}
+.chip:active{transform:scale(.97)}
+.chip.selected{background:var(--dark);color:#fff;border-color:var(--dark)}
+.chip.selected.green{background:var(--green);border-color:var(--green)}
+.chip.selected.premium{background:var(--premium);border-color:var(--premium)}
+.lang-group{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.lang-item{padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--dark);display:flex;align-items:center;gap:8px;text-align:left}
+.lang-item:active{transform:scale(.97)}
+.lang-item.selected{background:var(--dark);color:#fff;border-color:var(--dark)}
+.lang-item .flag{font-size:18px;flex-shrink:0}
+.lang-name{font-size:12px;font-weight:600;display:block}
+.lang-sub{font-size:10px;opacity:.65;display:block}
+.exfo-group{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.exfo-btn{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--dark);text-align:center;line-height:1.4}
+.exfo-btn:active{transform:scale(.97)}
+.exfo-btn.selected{background:var(--coral);color:#fff;border-color:var(--coral)}
+.exfo-btn .exfo-main{font-weight:600;display:block}
+.exfo-btn .exfo-sub{font-size:10px;opacity:.7;display:block;margin-top:2px}
+.divider-label{font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.06em;margin:12px 0 8px}
+
+/* 생성 버튼 */
+.btn-generate{width:100%;padding:16px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:opacity .2s}
+.btn-generate:active{opacity:.85}
+.btn-generate:disabled{opacity:.5;cursor:not-allowed}
+.btn-generate.loading{background:var(--mid)}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:12px;overflow:hidden;display:none}
+.progress-fill{height:100%;background:var(--gold);border-radius:2px;width:0%;transition:width .3s ease}
+.progress-bar.visible{display:block}
+
+/* 결과 영역 */
+.result-box{display:none;background:var(--card);border-radius:14px;border:1px solid var(--border);margin-top:16px;overflow:hidden}
+.result-box.visible{display:block}
+.result-hdr{padding:14px 16px;background:var(--premium-bg);border-bottom:1px solid #C8A8E8;display:flex;align-items:center;justify-content:space-between}
+.result-hdr-left{display:flex;align-items:center;gap:8px}
+.result-title{font-size:14px;font-weight:700;color:var(--premium)}
+.lang-badge{display:inline-block;padding:3px 10px;background:var(--gold-bg);border:1px solid var(--gold);border-radius:20px;font-size:10px;font-weight:700;color:#8B6914;margin-bottom:8px}
+.preview-section{padding:16px;border-bottom:1px solid var(--border)}
+.preview-section:last-of-type{border-bottom:none}
+.preview-label{font-size:10px;font-weight:700;color:var(--mid);letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.preview-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.preview-text{font-size:13px;line-height:1.8;color:var(--dark);white-space:pre-wrap;background:var(--light);border-radius:8px;padding:14px;max-height:400px;overflow-y:auto}
+
+/* 이메일 미리보기 (HTML 렌더링) */
+.email-preview-frame{width:100%;border:1px solid var(--border);border-radius:8px;background:#fff;min-height:300px;max-height:600px}
+
+.result-actions{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.btn-action{flex:1;min-width:140px;padding:13px;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#fff}
+.btn-copy-html{background:var(--green)}
+.btn-copy-text{background:var(--mid)}
+.btn-gmail{background:var(--dark)}
+.btn-mark-sent{background:var(--premium)}
+.btn-action:active{opacity:.85}
+.btn-action:disabled{opacity:.5;cursor:not-allowed}
+
+.tip-note{background:var(--gold-bg);border:1px solid #E8D08A;border-radius:8px;padding:10px 12px;font-size:11px;color:#8B6914;margin-top:10px;line-height:1.6}
+.warning-note{background:#FFEBEB;border:1px solid #B94040;border-radius:8px;padding:10px 12px;font-size:11px;color:#B94040;margin-top:10px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-sub">LAUREL STUDIO · HONGDAE SEOUL</div>
+  <div class="header-title">Expert Tip Generator<span class="version-badge">v3</span></div>
+  <div class="header-desc">전체 매뉴얼 통합 · 8,000건 노하우 기반 AI 전문가팁</div>
+</div>
+
+<div class="content">
+
+  <!-- 1. 검색 -->
+  <div class="section search-section">
+    <div class="section-hdr">
+      <div class="section-num">1</div>
+      <div class="section-title">고객 조회 (CARE_Data)</div>
+      <div class="section-count" id="searchStatus">대기 중</div>
+    </div>
+    <div class="section-body">
+      <div class="search-row">
+        <select id="searchType">
+          <option value="email">이메일</option>
+          <option value="name">이름</option>
+          <option value="date">방문일</option>
+        </select>
+        <input type="text" id="searchValue" placeholder="검색어 입력 (예: bethany 또는 일부)" onkeydown="if(event.key==='Enter')searchCustomer()">
+        <button class="btn-search" id="btnSearch" onclick="searchCustomer()">🔍 검색</button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+      <div id="selectedCustomer" class="selected-customer">
+        <button class="btn-clear-customer" onclick="clearCustomer()">✕ 변경</button>
+        <div class="sc-title">SELECTED CUSTOMER</div>
+        <div class="sc-name" id="scName"></div>
+        <div class="sc-info" id="scInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 고객 기본 정보 (자동 채워짐) -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">2</div><div class="section-title">고객 정보 (자동 채움 / 수정 가능)</div></div>
+    <div class="section-body">
+      <div class="form-row">
+        <div class="form-group"><label>이름 (Name)</label><input type="text" id="guestName" placeholder="예: Sarah"></div>
+        <div class="form-group"><label>이메일</label><input type="email" id="guestEmail" placeholder="guest@email.com"></div>
+        <div class="form-group"><label>나이대</label><select id="guestAge"><option value="">선택</option><option>10대</option><option>20대</option><option>30대</option><option>40대</option><option>50대</option><option>60대 이상</option></select></div>
+        <div class="form-group"><label>성별</label><select id="guestGender"><option value="">선택</option><option>여성</option><option>남성</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>국적 (Nationality)</label><input type="text" id="guestNationality" placeholder="예: American, German"></div>
+        <div class="form-group"><label>거주지 (Current Residence)</label><input type="text" id="guestResidence" placeholder="예: Okinawa, Texas, Sydney"></div>
+      </div>
+      <input type="hidden" id="caseId">
+    </div>
+  </div>
+
+  <!-- 3. 국가 / 언어 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">3</div><div class="section-title">국가 / 출력 언어</div></div>
+    <div class="section-body">
+      <div class="lang-group">
+        <button class="lang-item" onclick="selectLang(this,'미국 (English)')"><span class="flag">🇺🇸</span><div><span class="lang-name">미국</span><span class="lang-sub">English</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'영국 (English)')"><span class="flag">🇬🇧</span><div><span class="lang-name">영국</span><span class="lang-sub">English</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'호주 (English)')"><span class="flag">🇦🇺</span><div><span class="lang-name">호주</span><span class="lang-sub">English</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'캐나다 (English)')"><span class="flag">🇨🇦</span><div><span class="lang-name">캐나다</span><span class="lang-sub">English</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'프랑스 (Français)')"><span class="flag">🇫🇷</span><div><span class="lang-name">프랑스</span><span class="lang-sub">Français</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'레바논 (عربي + Français)')"><span class="flag">🇱🇧</span><div><span class="lang-name">레바논</span><span class="lang-sub">عربي + Français</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'독일 (Deutsch)')"><span class="flag">🇩🇪</span><div><span class="lang-name">독일</span><span class="lang-sub">Deutsch</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'이탈리아 (Italiano)')"><span class="flag">🇮🇹</span><div><span class="lang-name">이탈리아</span><span class="lang-sub">Italiano</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'스웨덴 (Svenska)')"><span class="flag">🇸🇪</span><div><span class="lang-name">스웨덴</span><span class="lang-sub">Svenska</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'터키 (Türkçe)')"><span class="flag">🇹🇷</span><div><span class="lang-name">터키</span><span class="lang-sub">Türkçe</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'멕시코 (Español)')"><span class="flag">🇲🇽</span><div><span class="lang-name">멕시코</span><span class="lang-sub">Español</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'홍콩 (廣東話)')"><span class="flag">🇭🇰</span><div><span class="lang-name">홍콩</span><span class="lang-sub">廣東話 繁體</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'마카오 (廣東話)')"><span class="flag">🇲🇴</span><div><span class="lang-name">마카오</span><span class="lang-sub">廣東話 繁體</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'중국 (中文 普通話)')"><span class="flag">🇨🇳</span><div><span class="lang-name">중국</span><span class="lang-sub">中文 普通話</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'한국 (한국어)')"><span class="flag">🇰🇷</span><div><span class="lang-name">한국</span><span class="lang-sub">한국어</span></div></button>
+        <button class="lang-item" onclick="selectLang(this,'기타 (English)')"><span class="flag">🌍</span><div><span class="lang-name">기타</span><span class="lang-sub">English</span></div></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 피부 특성 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">4</div><div class="section-title">피부 특성 (복수 선택)</div><div class="section-count" id="skinTypeCount">0개 선택</div></div>
+    <div class="section-body">
+      <div class="chips" id="chipsSkinTypes">
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">얇은 피부</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">건조</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">탈수성 지성</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">지성</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">복합성</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">민감성</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">아토피</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">초예민</button>
+        <button class="chip" onclick="toggleChip(this,'skinTypes')">정상</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 주요 고민 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">5</div><div class="section-title">주요 피부 고민 (복수 선택)</div><div class="section-count" id="concernCount">0개 선택</div></div>
+    <div class="section-body">
+      <div class="chips" id="chipsConcerns">
+        <button class="chip" onclick="toggleChip(this,'concerns')">트러블/여드름</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">화농성/모낭염</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">홍조</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">로사시아</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">모공</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">블랙헤드</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">색소침착/잡티</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">기미/멜라즈마</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">주름/탄력</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">다크서클</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">각질/과각질화</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">편평사마귀</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">Trichostasis Spinulosa</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">지루성 피부염</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">폐경 전 건조증</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">흔적/자국 (일반)</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">착색된 여드름 흉터</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">붉은 여드름 흉터</button>
+        <button class="chip" onclick="toggleChip(this,'concerns')">패인 흉터</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 케어 버전 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">6</div><div class="section-title">케어 버전</div></div>
+    <div class="section-body">
+      <div class="chips">
+        <button class="chip" id="careBasic" onclick="selectCare('basic')">베이직 케어</button>
+        <button class="chip selected premium" id="carePremium" onclick="selectCare('premium')">프리미엄 케어</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 추천 제품 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">7</div><div class="section-title">추천 제품 (복수 선택)</div><div class="section-count" id="productCount">0개 선택</div></div>
+    <div class="section-body">
+      <div class="divider-label">🧴 기본 보습 크림</div>
+      <div class="chips" id="chipsProducts" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">아토베리어 365 크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">아토팜 판테놀 크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">네오팜 리얼베리어 워터리 히알크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">마몽드 프로바이오틱스 세라마이드 인텐스</button>
+        <button class="chip" onclick="toggleChip(this,'products')">라로슈포제 시카플라스트 B5+ 크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">COSRX 밸런시엄 컴포트 세라마이드 크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">제로이드 인텐시브크림 MD (처방)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">세타필 모이스춰라이징 크림 (바디)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">피지오겔 DMT 크림 (바디)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">동아제약 D-판테놀 연고 (약국)</button>
+      </div>
+      <div class="divider-label">💧 앰플/세럼</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">닥터씨피유 하이드로 앰플 (다이소)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">노스카퍼스트스탭 앰플 (다이소)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">더마팩토리 나이아신아마이드 20%</button>
+        <button class="chip" onclick="toggleChip(this,'products')">THE LAB by blanc doux Clear Hyal 앰플</button>
+        <button class="chip" onclick="toggleChip(this,'products')">MIXOON 콩에센스</button>
+      </div>
+      <div class="divider-label">✨ 레티놀</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">본셉 레티놀 2500IU 링클샷</button>
+        <button class="chip" onclick="toggleChip(this,'products')">본셉 레티놀 500IU 세럼 (순함)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">본셉 레티놀 2500IU + 스쿠알란 (목)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">닥터디퍼런트 레티날 0.1 (피지필라멘트)</button>
+      </div>
+      <div class="divider-label">💊 스팟 트리트먼트</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">아젤라인산 연고</button>
+        <button class="chip" onclick="toggleChip(this,'products')">에크논겔 (좁쌀여드름)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">멜라노사 크림 (히드로퀴논 4%)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">하나로겔 (헤파리노이드)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">디페린겔 (패인 흉터, 약국)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">수란트라 (이버멕틴 1%, 처방)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">큐아크네 플러스 크림</button>
+      </div>
+      <div class="divider-label">☀️ 선크림</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">다이소 마린루브 선젤 SPF50+</button>
+        <button class="chip" onclick="toggleChip(this,'products')">다이소 비프루트 선젤</button>
+        <button class="chip" onclick="toggleChip(this,'products')">미네랄 선크림 (Zinc/Titanium)</button>
+      </div>
+      <div class="divider-label">💫 미백/색소</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">파티온 노스카나인 흔적앰플</button>
+        <button class="chip" onclick="toggleChip(this,'products')">트리넥삼산 처방약</button>
+      </div>
+      <div class="divider-label">💪 탄력/목/낮 보충</div>
+      <div class="chips" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'products')">바이 리얼베리어 세라베이스 퍼밍 (목)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">다이소 클리덤 콜라겐+아데노신 크림</button>
+        <button class="chip" onclick="toggleChip(this,'products')">다이소 판테놀 세라마이드 크림 (낮)</button>
+      </div>
+      <div class="divider-label">🌿 클렌징</div>
+      <div class="chips">
+        <button class="chip" onclick="toggleChip(this,'products')">닥터지 약산성 젤 클렌져</button>
+        <button class="chip" onclick="toggleChip(this,'products')">클렌징 밀크 (듀이트리)</button>
+        <button class="chip" onclick="toggleChip(this,'products')">베이비 그레이드 클렌저</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 각질제거 주기 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">8</div><div class="section-title">각질제거 주기</div><div class="section-count" id="exfoLabel" style="color:var(--coral);font-weight:600">월 1회 (기본)</div></div>
+    <div class="section-body">
+      <div style="font-size:11px;color:var(--mid);margin-bottom:10px;line-height:1.6">고객 피부 상태에 맞는 각질제거 주기를 선택하세요. 스크럽 금지, PHA 젤/겔만 권장.</div>
+      <div class="exfo-group">
+        <button class="exfo-btn" onclick="selectExfo(this,'금지')"><span class="exfo-main">각질제거 금지</span><span class="exfo-sub">초예민·로사시아·아토피</span></button>
+        <button class="exfo-btn" onclick="selectExfo(this,'2주 1회')"><span class="exfo-main">2주 1회</span><span class="exfo-sub">정상·지성</span></button>
+        <button class="exfo-btn selected" onclick="selectExfo(this,'월 1회')"><span class="exfo-main">월 1회</span><span class="exfo-sub">얇은 피부 (기본)</span></button>
+        <button class="exfo-btn" onclick="selectExfo(this,'2개월 1회')"><span class="exfo-main">2개월 1회</span><span class="exfo-sub">민감성</span></button>
+      </div>
+      <div class="exfo-group" style="margin-top:6px">
+        <button class="exfo-btn" onclick="selectExfo(this,'분기별 1회')"><span class="exfo-main">분기별 1회</span><span class="exfo-sub">극민감</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 특이사항 -->
+  <div class="section">
+    <div class="section-hdr"><div class="section-num">9</div><div class="section-title">특이사항 / 추가 메모</div></div>
+    <div class="section-body">
+      <div class="chips" id="chipsSpecial" style="margin-bottom:12px">
+        <button class="chip" onclick="toggleChip(this,'special')">수염 있음</button>
+        <button class="chip" onclick="toggleChip(this,'special')">루푸스</button>
+        <button class="chip" onclick="toggleChip(this,'special')">주사피부염 (Rosacea)</button>
+        <button class="chip" onclick="toggleChip(this,'special')">묘기증</button>
+        <button class="chip" onclick="toggleChip(this,'special')">임산부</button>
+        <button class="chip" onclick="toggleChip(this,'special')">당뇨</button>
+        <button class="chip" onclick="toggleChip(this,'special')">심혈관 질환</button>
+        <button class="chip" onclick="toggleChip(this,'special')">알러지 체질</button>
+        <button class="chip" onclick="toggleChip(this,'special')">메이크업 자주 함</button>
+        <button class="chip" onclick="toggleChip(this,'special')">오일 클렌징 사용 중</button>
+        <button class="chip" onclick="toggleChip(this,'special')">레이저 시술 후</button>
+        <button class="chip" onclick="toggleChip(this,'special')">얇은 피부+낮은 멜라닌</button>
+      </div>
+      <div class="form-group" style="margin-top:10px"><label>테라피스트 관찰 내용 (자동 채움 / 수정)</label><textarea id="therapistNote" placeholder="시트의 tp_notes에서 자동으로 채워집니다"></textarea></div>
+      <div class="form-group" style="margin-top:10px"><label>추가 메모 (자유 입력)</label><textarea id="extraNote" placeholder="예: 어머니와 같이 옴, 다음 한국 방문은 1년 후 등"></textarea></div>
+      <div class="form-group" style="margin-top:10px"><label>마무리 인사말 (선택)</label><input type="text" id="closingMsg" placeholder="예: 좋은 서울 여행 되세요 💕"></div>
+    </div>
+  </div>
+
+  <div class="tip-note">💡 국가 선택 시 해당 언어로 자동 출력됩니다. 트리넥삼산 선택 시 전문의 상담 안내가 자동 포함됩니다. CARE_Data에서 자동 채워진 정보를 검토 후 필요시 수정하세요.</div>
+
+  <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+  <button class="btn-generate" id="generateBtn" onclick="generateTip()">
+    <div class="spinner" id="spinner"></div>
+    <span id="generateLabel">✨ 전문가팁 생성 + 이메일 조립</span>
+  </button>
+
+  <!-- 결과 -->
+  <div class="result-box" id="resultBox">
+    <div class="result-hdr">
+      <div class="result-hdr-left">
+        <span style="font-size:18px">⭐</span>
+        <div class="result-title">생성 완료 — 발송 준비됨</div>
+      </div>
+      <span style="font-size:11px;color:var(--mid)" id="resultName"></span>
+    </div>
+
+    <div class="preview-section">
+      <div class="lang-badge" id="langBadge">🌍 English</div>
+      <div class="preview-label">📧 이메일 미리보기 (HTML 렌더링)</div>
+      <iframe class="email-preview-frame" id="emailPreviewFrame"></iframe>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-label">📝 한국어 요약 (내부 확인용)</div>
+      <div class="preview-text" id="koText">—</div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-action btn-copy-html" onclick="copyEmailHTML()">📋 HTML 본문 복사</button>
+      <button class="btn-action btn-gmail" onclick="openGmail()">📧 Gmail 열기</button>
+      <button class="btn-action btn-mark-sent" onclick="markAsSent()">✅ 발송 완료 기록</button>
+    </div>
+    <div id="sentStatus" style="text-align:center;padding:8px;font-size:12px;color:var(--mid);min-height:20px"></div>
+  </div>
+
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LAUREL STUDIO 전문가 매뉴얼 — AI에게 전달되는 핵심 지식
+//  8,000건 실증 데이터 + 핫짱 전문 지식 기반
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const LAUREL_MANUAL = `
+═══════════════════════════════════════════
+LAUREL STUDIO 핵심 원칙
+═══════════════════════════════════════════
+- 모든 피부 문제의 근본 원인은 수분 부족과 장벽 손상
+- 기능성 성분은 피부가 건강할 때만 효과적 (아픈 사람에게 고강도 운동 비유)
+- 단계별 접근: 1달째 장벽 회복 → 2달째+ 기능성 성분 추가 → 점진적 강화
+- 고객 국적에 맞는 언어로 작성
+- 지역별 UV 환경 반영
+
+═══════════════════════════════════════════
+핵심 메커니즘 (반드시 해당 사례에 포함)
+═══════════════════════════════════════════
+
+[1] 탈수성 지성 (Dehydrated-Oily):
+피부가 건조하면 → 세바셔스 글랜드가 비상 모드로 피지 과잉 분비 → 모공 확장 + 블랙헤드(산화된 피지) + 트러블(피지 트랩 → 박테리아) → 수분 공급으로 해결
+
+[2] 홍조 메커니즘 (Coolant System):
+모세혈관 확장 → 냉각 메커니즘이 수분(coolant)을 필요로 함 → 수분 부족하면 혈관 수축 불가 → 홍조 지속 → 진정 제품보다 수분 회복이 우선
+
+[3] 물풍선 비유 (Water Balloon = Firmness):
+물풍선 100% = 탱탱, 50% = 주름. 피부 세포도 동일. 탄력 저하 = 구조적 노화가 아닌 수분 부족일 수 있음
+
+[4] 아픈 사람 + 고강도 운동 비유:
+기능성 성분(레티놀, 비타민C 등)은 피부에 "통제된 스트레스". 건강한 피부 = 성장. 약한 피부 = 더 악화. 먼저 회복 후 사용
+
+[5] 미스트 금지 (Anti-Mist):
+미스트 → 수분 증발 시 피부 내부 수분까지 함께 증발 (TEWL) → 일시적 시원함 → 더 건조해짐. 크림으로 대체
+
+[6] 토너/로션 스킵:
+90% 이상 물 → 크림 흡수 방해 → 세안 후 1분 이내 크림 직접 도포
+
+[7] 약산성 vs 알칼리 (락스 비유):
+알칼리 = 락스처럼 보호막 파괴 → 약산성으로 보호막 유지하며 세안
+
+[8] 샤워기 세안 금지:
+수압이 모세혈관 자극 → 홍조 악화. 반드시 세면대에서 손으로 물 떠서 세안
+
+[9] 과각질화 (Hyperkeratosis):
+60대+ 또는 UV 손상 → 세포 턴오버 저하 → 각질 축적 → 제품 흡수 방해 → MIXOON 등으로 관리
+
+[10] 멜라닌 + 염증 = 색소 침착:
+염증 → 멜라닌 반응 → 색소 침착. 멜라닌 많은 피부는 더 심함. 진정이 색소 관리의 첫 걸음
+
+[11] 이마 = UV 최초 수신부:
+이마가 얼굴에서 가장 먼저 UV 받음 → 피지/좁쌀 원인 → 모자 착용 권장
+
+[12] 역순 레이어링 (Reverse Layering - 항아리 비유):
+항아리에 큰 돌(크림) → 작은 모래(앰플/세럼) 순으로 채우면 더 촘촘하게 채워짐. 크림 먼저 → 앰플 위에
+
+═══════════════════════════════════════════
+제품 데이터베이스
+═══════════════════════════════════════════
+
+[기초 보습 크림]
+- 아토베리어 365 크림 (Atobarrier 365 Cream): 장벽 회복 기본, 검지 두 마디, 세라마이드 복합체, 대부분 고객 기본
+- 아토팜 판테놀 크림 (Atopalm Panthenol Cream): 진정+재생, 엄지 한 마디, 판테놀(B5), 아토베리어 아래
+- 네오팜 리얼베리어 워터리 히알크림: 아토베리어 대체, 가벼운 텍스처, 끈적임 싫어하는 고객
+- 마몽드 프로바이오틱스 세라마이드 인텐스: 민감 + 모공 막힘 낮음, 프로바이오틱스, 모공 비코메도제닉
+- 라로슈포제 시카플라스트 B5+ 크림: 5% 판테놀 + 마데카소사이드, 미국 약국 구매 가능
+- COSRX 밸런시엄 컴포트 세라마이드 크림: 지루성 피부염/민감, 세라마이드 10,000ppm + 센텔라 50%
+- 제로이드 인텐시브크림 MD: 처방용 장벽 크림 (병원 처방 필요)
+- 세타필 모이스춰라이징 크림: 바디용, 손바닥 반, 피지오겔과 섞어 사용 가능
+- 피지오겔 DMT 크림: 바디용, 엄지 한 마디, 세타필과 섞기
+- 동아제약 D-판테놀 연고: 약국, 엄지손톱 양, 아토베리어 아래
+
+[앰플/세럼]
+- 닥터씨피유 하이드로 앰플 (다이소): 딥 하이드레이션, 2달째+, 엄지 한 마디, 아토베리어 아래
+- 노스카퍼스트스탭 앰플 (다이소): 흔적/마크 케어, 2달째+, 엄지 한 마디
+- 더마팩토리 나이아신아마이드 20%: 모공/브라이트닝, 3달째+, 소량, 역순레이어링 (크림 위)
+- THE LAB by blanc doux Clear Hyal 앰플: 멀티레이어 수분, 2달째+, 아토베리어 위에 (역순)
+- MIXOON 콩에센스 (MIXSOON Bean Essence): 각질제거 대체, 검지 한 마디
+
+[레티놀 — 모두 밤에만, 아토베리어 위/아래에 도포, 다음 날 선크림 필수]
+- 본셉 레티놀 2500IU 링클샷: 일반 피부, 건강한 장벽, 3일 1회 시작 → 2일 → 매일
+- 본셉 레티놀 500IU 세럼: 민감/알러지/멜라닌 높음/60대+, 2일 1회 시작 → 매일
+- 본셉 레티놀 2500IU + 스쿠알란: 목주름 전용
+- 닥터디퍼런트 레티날 0.1: 피지필라멘트, 자외선 차단 필수
+
+[스팟 트리트먼트]
+- 아젤라인산 연고: 홍조/붉은 여드름/스팟, 좁쌀보다 작은 양, 아토베리어 위에, 주 1~2회, 레티놀과 겹치지 않게
+- 에크논겔 (Acnon Gel): 좁쌀여드름/피지필라멘트, 소량 스팟, 아토베리어 위에, 저녁만, 레티놀 금지일
+- 멜라노사 크림 (히드로퀴논 4%): 착색된 여드름 흉터, 소량 스팟, 의사 상담 권장
+- 하나로겔 (헤파리노이드): 붉은 여드름 흉터, 소량
+- 디페린겔: 패인 흉터, 소량, 약국 구매
+- 수란트라 (이버멕틴 1%): 주사피부염(rosacea) 전용, 완두콩 크기, 처방 필요, 코에 하루 1회
+- 큐아크네 플러스 크림: 트러블 스팟 케어
+
+[선크림]
+- 다이소 마린루브 선젤: 가벼움, 끈적임 없음
+- 다이소 비프루트 선젤: 가벼움, 상큼한 텍스처
+- 미네랄 선크림 (Zinc/Titanium): 알러지 체질용
+
+[클렌저]
+- 닥터지 약산성 젤 클렌져: 약산성, 젤 타입, 깨끗한 세정
+
+[낮 수분 보충]
+- 다이소 판테놀 세라마이드 크림: 미스트 대용, 낮에 수시로 도포
+
+[목/바디 케어]
+- 바이 리얼베리어 세라베이스 퍼밍 부스터 크림: 목라인 전용 탄력 크림
+
+[탄력 서브]
+- 다이소 클리덤 저분자콜라겐+아데노신 크림: 탄력/안티에이징 서브, 저녁 오버레이
+
+[기타]
+- 트리넥삼산 (Tranexamic Acid): 기미/브라이트닝, 2개월 코스, 연 1회, 의사 상담 필수
+
+═══════════════════════════════════════════
+고객 프로필별 매칭 룰 (15개)
+═══════════════════════════════════════════
+
+Rule 1 - 기본: 모든 고객 → Month 1: 아토베리어 365 크림 아침저녁, 약산성 세안, 토너/로션 스킵, 1분 이내 도포
+
+Rule 2 - 얇은 피부 + 홍조 + 민감 (극도):
+Month 1-2: 아토팜 판테놀 + 아토베리어 섞어서 도포
+각질제거: 올해 안됨
+레티놀: 내년 또는 피부 안정 후
+
+Rule 3 - 탈수성 지성 + 블랙헤드:
+Month 1: 아토베리어 365
+Month 2: 레티놀 2500IU 3일 1회 추가
+각질제거: MIXOON 2~3일 1회 대체
+
+Rule 4 - 멜라닌 높음 + 색소침착:
+트리넥삼산 의사 상담 추천
+레티놀: 500IU 선택 (고농도 → 염증 → 더 많은 색소 위험)
+선크림 특별 강조
+
+Rule 5 - 50대+ 노화:
+Month 1: 아토베리어 365 (많이)
+Month 2: 노스카퍼스트스탭 앰플 또는 판테놀 추가
+Month 3+: 레티놀 2500IU 또는 500IU
+목: 리얼베리어 퍼밍 크림
+
+Rule 6 - 60대+ 심한 노화:
+판테놀 + 아토베리어 섞어서 즉시 시작
+과각질화 주의 → MIXOON으로 관리
+레티놀: 3달+ 후, 500IU로 서행
+목: 리얼베리어 퍼밍 크림
+아기 제품 권장 (알러지 체질일 경우)
+
+Rule 7 - 모공 주요 고민:
+Month 3: 더마팩토리 나이아신아마이드 20% 추가
+역순 레이어링 (판테놀 → 아토베리어 → 나이아신아마이드)
+
+Rule 8 - 열감 + 심한 홍조:
+아젤라인산 극소량 추천
+낮: 판테놀 세라마이드 크림 (미스트 금지)
+
+Rule 9 - 알러지 체질:
+제품 하나씩 순차 도입 (반응 확인)
+향료/아로마 완전 금지
+아기용 제품 권장
+레티놀: 500IU (순한 것)
+
+Rule 10 - 주사피부염 (Rosacea):
+아젤라인산 또는 수란트라(처방) 추천
+각질제거 절대 불가
+레티놀: 신중하게 또는 불가
+피부과 상담 권고
+
+Rule 11 - 편평사마귀: CO2 레이저 제거 권고, 스킨케어로는 해결 불가
+
+Rule 12 - Trichostasis Spinulosa (가시털정체증):
+블랙헤드처럼 보이지만 털 → 레이저 제거 필요
+
+Rule 13 - 지루성 피부염:
+COSRX 밸런시엄 세라마이드 크림 (센텔라 함유)
+바늘/강한 필링 절대 불가
+
+Rule 14 - 폐경 전 건조증:
+열감 반복 → 수분 증발 가속 → 순한 제품 + 자주 도포
+
+Rule 15 - 젊은 피부 (20대) + 밀도 있음:
+리얼베리어 워터리 히알크림 (가벼운 텍스처)
+클리덤 콜라겐+아데노신 크림 (저녁 오버레이)
+
+═══════════════════════════════════════════
+지역별 UV 특성 (지역 정보 사용 시 필수 반영)
+═══════════════════════════════════════════
+- 호주: 극강. 오존층 얇음, 차 안에서도 UV 침투
+- 오키나와: 극강. 위도 26°, 연중 무휴 UV, 저 UV 시즌 없음
+- 텍사스: 높음. 봄~가을 강함, 차 유리 UV 침투
+- 싱가포르: 극강 (적도). 연중 일정, 습도 ≠ 수분
+- 영국: 중간. 구름 뚫고 80% UV 침투, 흐려도 바를 것
+- 스위스: 높음 (고도). 고도 UV 강함, 눈 반사 80%
+- 프랑스: 중간
+- 네덜란드: 중간. 구름 뚫고 80% UV
+
+═══════════════════════════════════════════
+세안 루틴 표준
+═══════════════════════════════════════════
+[선크림 사용 시]
+1. 클렌징밀크 2~3펌프 → 마른 피부에 도포 → 녹이듯 러빙
+2. 미온수 3~4회 헹굼
+3. 약산성 폼클렌저 거품 세안
+4. 미온수 10회 이상 헹굼
+5. 부드럽게 톡톡 물기 제거 (절대 문지르지 않기)
+6. 1분 이내 수분크림 도포
+
+[선크림 미사용]
+1. 약산성 폼클렌저 거품 세안
+2. 미온수 10회 이상 헹굼
+3. 1분 이내 수분크림 도포
+
+절대 금지: 뜨거운 물, 샤워기로 세안, 타월로 문지르기
+
+═══════════════════════════════════════════
+각질제거 가이드
+═══════════════════════════════════════════
+- 장벽 심하게 손상: 절대 안됨
+- 로사시아: 절대 안됨
+- 알러지 체질: 절대 안됨
+- 일반 건성: 올해 안됨, 내년부터 2달 1회 PHA 젤
+- 안정된 피부: 한달 1회 PHA 젤
+- MIXOON 대체: 2~3일 1회 ~ 주 1~2회 MIXOON 콩에센스
+절대 금지: 물리적 스크럽, 거친 천, 포어스트립
+
+═══════════════════════════════════════════
+시술 권장 (해당 시 안내)
+═══════════════════════════════════════════
+- CO2 레이저: 편평사마귀 제거, 한국에서 저렴, 1~2주 회복
+- 보톡스 (이마+턱): 이마 주름 + 턱라인, 피코토닝보다 저렴할 수 있음, 보수적 소량
+- 트리넥삼산 (경구): 기미/브라이트닝, 한국 2달분 약 2만원, 의사 상담 필수
+- 써마지: 콜라겐 촉진, 연 1회, 수분 회복 기반 필요
+- 쥬베룩 볼륨: 콜라겐 재생, 2~3년 1회
+
+═══════════════════════════════════════════
+절대 규칙 15개 — 반드시 준수
+═══════════════════════════════════════════
+1. 레티놀은 밤에만 — 예외 없음
+2. 선크림은 매일 아침 — 예외 없음
+3. 토너/로션 스킵 — 최소 1개월
+4. 세안 후 1분 이내 크림 — 핵심
+5. 물리적 스크럽 절대 금지 — PHA 또는 MIXOON만
+6. 레티놀과 각질제거 같은 날 금지
+7. 레티놀과 아젤라인산 같은 날 금지
+8. 아젤라인산은 크림 위에 — 맨 피부 금지
+9. 에크논겔은 크림 위에 — 맨 피부 금지
+10. 미스트 금지 — 크림으로 대체
+11. 샤워기 세안 금지
+12. 뜨거운 물 금지 — 체온 미온수
+13. 트리넥삼산은 의사 상담 필수
+14. 수란트라는 처방 필수
+15. BB크림 > 파운데이션 — 항상 권장
+
+═══════════════════════════════════════════
+언어별 작성 규칙
+═══════════════════════════════════════════
+- 영어: 대부분 고객
+- 프랑스어: "Conseils personnalisés pour [이름]", "Prenez bien soin de vous 🤍"
+- 독일어: "Persönliche Experten-Hautpflegetipps für [이름]", "Pass gut auf dich auf 🤍"
+- 스위스 독일어: 독일어와 동일하되 ß 대신 ss 사용 (übermässig, ungleichmässig)
+- 네덜란드어: "Persoonlijke huidverzorgingstips voor [이름]", "Goed op jezelf passen 🤍"
+- 독일 출신 오키나와 거주: 영어로 작성하되 독일어 한 줄씩 포인트 삽입 (예: "Mach's gut!", "statt Foundation")
+
+═══════════════════════════════════════════
+문서 포맷 — 프리미엄 풀버전
+═══════════════════════════════════════════
+✨ Personalized Expert Skin Tips for [이름]
+Laurel Studio | Hongdae, Seoul
+
+💧 [이름], it was [개인화된 인사] 🌸
+
+📄 The Truth About Your Skin — [핵심 진단 제목]
+- 피부 상태 설명 (메커니즘 포함)
+
+🔴 The Redness — [홍조 원인] (해당 시)
+📄 The [추가 고민] — [메커니즘]
+
+🫧 Your Complete Cleansing Routine
+
+💧 Your Skincare Plan — Step by Step
+- Month 1: [기초 제품]
+- Month 2+: [추가 제품]
+
+🌿 Exfoliation — [상태 맞춤]
+☀️ Sunscreen — [지역 맞춤]
+🌿 Initial Redness Note
+📄 Your Routine at a Glance
+📄 What to Expect [타임라인]
+
+[개인화 마무리 인사] 🤍
+
+Laurel Studio | Hongdae, Seoul
+Expert Skin Consultation — Science-Based, Client-First 🌿
+`;
+
+const WEBHOOK = "https://script.google.com/macros/s/AKfycbxbdtH3LbWfvbRl1dBt3fXejg2F8QGAipewlatItWh3HgSj_MynIWEvVm-tHiTC5jCLXA/exec";
+
+const selections = { skinTypes:[], concerns:[], products:[], special:[] };
+let careVersion = 'premium', selectedLang = '', exfoFrequency = '월 1회';
+let generatedMain = '', generatedHtml = '';
+let guestEmailValue = '', guestNameValue = '';
+let currentCaseId = '', currentRowNumber = null;
+let progressInterval = null;
+
+const langMap = {
+  '미국 (English)':{flag:'🇺🇸',label:'English',inst:'영어(English)로 작성하세요.'},
+  '영국 (English)':{flag:'🇬🇧',label:'English (UK)',inst:'영어(English)로 작성하세요.'},
+  '호주 (English)':{flag:'🇦🇺',label:'English (AU)',inst:'영어(English)로 작성하세요. 호주의 강한 자외선 환경을 반드시 강조하세요.'},
+  '캐나다 (English)':{flag:'🇨🇦',label:'English (CA)',inst:'영어(English)로 작성하세요.'},
+  '프랑스 (Français)':{flag:'🇫🇷',label:'Français',inst:'프랑스어(Français)로만 작성하세요. 자연스럽고 따뜻한 프랑스어 표현을 사용하세요.'},
+  '레바논 (عربي + Français)':{flag:'🇱🇧',label:'عربي + Français',inst:'각 섹션마다 프랑스어 먼저 작성하고, 바로 아래에 레바논 아랍어 방언(عربي لبناني)으로 번역해 병기하세요.'},
+  '독일 (Deutsch)':{flag:'🇩🇪',label:'Deutsch',inst:'독일어(Deutsch)로만 작성하세요.'},
+  '이탈리아 (Italiano)':{flag:'🇮🇹',label:'Italiano',inst:'이탈리아어(Italiano)로만 작성하세요.'},
+  '스웨덴 (Svenska)':{flag:'🇸🇪',label:'Svenska',inst:'스웨덴어(Svenska)로만 작성하세요.'},
+  '터키 (Türkçe)':{flag:'🇹🇷',label:'Türkçe',inst:'터키어(Türkçe)로만 작성하세요.'},
+  '멕시코 (Español)':{flag:'🇲🇽',label:'Español (MX)',inst:'멕시코 스페인어(Español mexicano)로만 작성하세요.'},
+  '홍콩 (廣東話)':{flag:'🇭🇰',label:'廣東話 繁體',inst:'홍콩 스타일 광동어(廣東話, 繁體中文)로만 작성하세요.'},
+  '마카오 (廣東話)':{flag:'🇲🇴',label:'廣東話 繁體',inst:'마카오/홍콩 스타일 광동어(廣東話, 繁體中文)로만 작성하세요.'},
+  '중국 (中文 普通話)':{flag:'🇨🇳',label:'中文 普通話',inst:'표준 중국어(普通話, 简体中文)로만 작성하세요.'},
+  '한국 (한국어)':{flag:'🇰🇷',label:'한국어',inst:'한국어로만 작성하세요. 상냥하고 전문적인 표현을 사용하세요.'},
+  '기타 (English)':{flag:'🌍',label:'English',inst:'영어(English)로 작성하세요.'}
+};
+
+// 국가 자동 매칭
+const nationalityToLang = {
+  '미국':'미국 (English)','American':'미국 (English)','US':'미국 (English)','USA':'미국 (English)',
+  '영국':'영국 (English)','UK':'영국 (English)','British':'영국 (English)','England':'영국 (English)',
+  '호주':'호주 (English)','Australia':'호주 (English)','Australian':'호주 (English)','오키나와':'호주 (English)',
+  '캐나다':'캐나다 (English)','Canada':'캐나다 (English)','Canadian':'캐나다 (English)',
+  '프랑스':'프랑스 (Français)','France':'프랑스 (Français)','French':'프랑스 (Français)',
+  '레바논':'레바논 (عربي + Français)','Lebanon':'레바논 (عربي + Français)',
+  '독일':'독일 (Deutsch)','Germany':'독일 (Deutsch)','German':'독일 (Deutsch)','스위스':'독일 (Deutsch)','Swiss':'독일 (Deutsch)',
+  '이탈리아':'이탈리아 (Italiano)','Italy':'이탈리아 (Italiano)',
+  '스웨덴':'스웨덴 (Svenska)','Sweden':'스웨덴 (Svenska)',
+  '터키':'터키 (Türkçe)','Turkey':'터키 (Türkçe)',
+  '멕시코':'멕시코 (Español)','Mexico':'멕시코 (Español)','스페인':'멕시코 (Español)',
+  '홍콩':'홍콩 (廣東話)','Hong Kong':'홍콩 (廣東話)','HK':'홍콩 (廣東話)',
+  '마카오':'마카오 (廣東話)','Macao':'마카오 (廣東話)',
+  '중국':'중국 (中文 普通話)','China':'중국 (中文 普通話)','Chinese':'중국 (中文 普通話)','대만':'중국 (中文 普通話)','Taiwan':'중국 (中文 普通話)',
+  '한국':'한국 (한국어)','Korea':'한국 (한국어)','Korean':'한국 (한국어)',
+  '싱가포르':'기타 (English)','Singapore':'기타 (English)','일본':'기타 (English)','Japan':'기타 (English)',
+  '필리핀':'기타 (English)','인도네시아':'기타 (English)','폴란드':'기타 (English)','뉴욕':'미국 (English)','워싱턴':'미국 (English)'
+};
+
+// 나이대 매칭 (CARE_Data 형식 → 폼 select)
+function normalizeAge(ageStr){
+  if(!ageStr) return '';
+  const s = String(ageStr);
+  if(s.includes('19') || s.includes('20')) return '20대';
+  if(s.includes('25')) return '20대';
+  if(s.includes('30')) return '30대';
+  if(s.includes('35')) return '30대';
+  if(s.includes('40')) return '40대';
+  if(s.includes('45')) return '40대';
+  if(s.includes('50')) return '50대';
+  if(s.includes('55') || s.includes('60')) return '60대 이상';
+  return '';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  검색 시스템
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function searchCustomer(){
+  const searchType = document.getElementById('searchType').value;
+  const searchValue = document.getElementById('searchValue').value.trim();
+  if(!searchValue){
+    document.getElementById('searchStatus').textContent = '검색어 입력 필요';
+    return;
+  }
+  const btn = document.getElementById('btnSearch');
+  btn.disabled = true; btn.textContent = '검색 중...';
+  document.getElementById('searchStatus').textContent = '구글시트 조회 중...';
+  document.getElementById('searchResults').innerHTML = '';
+
+  const payload = {
+    action: 'search',
+    section: 'CARE',
+    search_type: searchType,
+    search_value: searchValue
+  };
+
+  try{
+    const url = WEBHOOK + '?data=' + encodeURIComponent(JSON.stringify(payload));
+    const resp = await fetch(url, {method:'GET', redirect:'follow'});
+    const text = await resp.text();
+    let data;
+    try{ data = JSON.parse(text); }
+    catch(e){
+      document.getElementById('searchStatus').textContent = '응답 파싱 실패';
+      document.getElementById('searchResults').innerHTML = '<div class="search-status">⚠ 응답이 JSON이 아닙니다. Apps Script 배포 권한을 확인하세요.</div>';
+      return;
+    }
+
+    if(data.status !== 'ok'){
+      document.getElementById('searchStatus').textContent = '오류';
+      document.getElementById('searchResults').innerHTML = `<div class="search-status">⚠ ${data.message || '알 수 없는 오류'}</div>`;
+      return;
+    }
+
+    document.getElementById('searchStatus').textContent = `${data.total}건 중 ${data.showing}건 표시`;
+    renderResults(data.results || []);
+  }catch(err){
+    document.getElementById('searchStatus').textContent = '네트워크 오류';
+    document.getElementById('searchResults').innerHTML = `<div class="search-status">⚠ ${err.message}</div>`;
+  }finally{
+    btn.disabled = false; btn.textContent = '🔍 검색';
+  }
+}
+
+function renderResults(results){
+  const container = document.getElementById('searchResults');
+  if(results.length === 0){
+    container.innerHTML = '<div class="search-status">검색 결과가 없습니다</div>';
+    return;
+  }
+  container.innerHTML = results.map((r, idx) => {
+    const isPremiumSent = r.premium_sent_at && r.premium_sent_at.trim() !== '';
+    const visitCount = r.visit_count || '';
+    const visitDate = r.visit_date || '';
+    const nationality = r.nationality || '';
+    const tags = [];
+    if(isPremiumSent){
+      tags.push(`<span class="result-tag sent">✓ Premium 발송됨</span>`);
+    }else{
+      tags.push(`<span class="result-tag new">○ 미발송</span>`);
+    }
+    if(visitCount) tags.push(`<span class="result-tag premium">${visitCount}</span>`);
+    if(r.tp_skintype) tags.push(`<span class="result-tag">${r.tp_skintype}</span>`);
+
+    return `
+      <div class="search-result-item ${isPremiumSent ? 'premium-sent' : ''}" onclick='selectResult(${JSON.stringify(r).replace(/'/g,"&apos;")})'>
+        <div>
+          <div class="result-name">${escapeHtml(r.client_name || '(이름 없음)')}</div>
+          <div class="result-meta">${escapeHtml(r.client_email || '')} · ${escapeHtml(nationality)} · ${escapeHtml(visitDate)}</div>
+          <div class="result-tags">${tags.join('')}</div>
+        </div>
+        <div style="color:var(--mid);font-size:18px">→</div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function selectResult(record){
+  currentCaseId = record.case_id || '';
+  currentRowNumber = record._row_number || null;
+
+  // 폼 자동 채움
+  document.getElementById('caseId').value = currentCaseId;
+  document.getElementById('guestName').value = record.client_name || '';
+  document.getElementById('guestEmail').value = record.client_email || '';
+  document.getElementById('guestAge').value = normalizeAge(record.age_group);
+  document.getElementById('guestGender').value = record.gender || '';
+  document.getElementById('guestNationality').value = record.nationality || '';
+  // 거주지는 nationality와 다를 수 있어서 비워둠 (핫짱이 직접 입력)
+  document.getElementById('guestResidence').value = '';
+
+  // 테라피스트 노트 채움
+  const tpNotes = [
+    record.tp_notes && `[관찰] ${record.tp_notes}`,
+    record.tp_skintype_detail && `[피부 상세] ${record.tp_skintype_detail}`,
+    record.tp_goals && `[목표] ${record.tp_goals}`,
+    record.care_summary && `[케어 요약] ${record.care_summary}`,
+    record.client_memo && `[고객 메모] ${record.client_memo}`,
+    record.care_homecare && `[홈케어 권장] ${record.care_homecare}`
+  ].filter(Boolean).join('\n\n');
+  document.getElementById('therapistNote').value = tpNotes;
+
+  // 국가 자동 언어 매칭
+  const nat = record.nationality || '';
+  let matchedLang = '';
+  for(const [key, val] of Object.entries(nationalityToLang)){
+    if(nat.toLowerCase().includes(key.toLowerCase())){
+      matchedLang = val; break;
+    }
+  }
+  if(matchedLang){
+    document.querySelectorAll('.lang-item').forEach(b => {
+      const onclickAttr = b.getAttribute('onclick') || '';
+      if(onclickAttr.includes(matchedLang)){
+        document.querySelectorAll('.lang-item').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        selectedLang = matchedLang;
+      }
+    });
+  }
+
+  // 피부 특성 자동 매칭 (tp_skintype + client_skintype)
+  const skinTypeText = ((record.tp_skintype || '') + ' ' + (record.client_skintype || '')).toLowerCase();
+  document.querySelectorAll('#chipsSkinTypes .chip').forEach(c => {
+    const txt = c.textContent.trim();
+    if(skinTypeText.includes(txt.toLowerCase()) || 
+       (txt === '탈수성 지성' && skinTypeText.includes('탈수')) ||
+       (txt === '얇은 피부' && skinTypeText.includes('얇'))){
+      if(!c.classList.contains('selected')){
+        c.classList.add('selected', 'green');
+        if(!selections.skinTypes.includes(txt)) selections.skinTypes.push(txt);
+      }
+    }
+  });
+
+  // 고민 자동 매칭 (client_concerns + tp_notes)
+  const concernText = ((record.client_concerns || '') + ' ' + (record.tp_notes || '') + ' ' + (record.client_memo || '')).toLowerCase();
+  document.querySelectorAll('#chipsConcerns .chip').forEach(c => {
+    const txt = c.textContent.trim();
+    const baseword = txt.split('/')[0].toLowerCase();
+    if(concernText.includes(baseword) || 
+       (txt.includes('홍조') && (concernText.includes('홍조') || concernText.includes('redness'))) ||
+       (txt.includes('로사시아') && (concernText.includes('rosacea') || concernText.includes('주사'))) ||
+       (txt.includes('모공') && concernText.includes('모공')) ||
+       (txt.includes('트러블') && (concernText.includes('트러블') || concernText.includes('여드름') || concernText.includes('acne'))) ||
+       (txt.includes('주름') && (concernText.includes('주름') || concernText.includes('탄력')))){
+      if(!c.classList.contains('selected')){
+        c.classList.add('selected', 'green');
+        if(!selections.concerns.includes(txt)) selections.concerns.push(txt);
+      }
+    }
+  });
+
+  document.getElementById('skinTypeCount').textContent = selections.skinTypes.length + '개 선택';
+  document.getElementById('concernCount').textContent = selections.concerns.length + '개 선택';
+
+  // 선택 카드 표시
+  document.getElementById('scName').textContent = record.client_name || '(이름 없음)';
+  document.getElementById('scInfo').innerHTML = `
+    📧 ${escapeHtml(record.client_email || '')}<br>
+    🗓 ${escapeHtml(record.visit_date || '')} · ${escapeHtml(record.visit_count || '')} · ${escapeHtml(record.therapist_name || '')}<br>
+    🌍 ${escapeHtml(record.nationality || '')} · ${escapeHtml(record.gender || '')} · ${escapeHtml(record.age_group || '')}<br>
+    🆔 ${escapeHtml(currentCaseId)}
+    ${record.premium_sent_at ? `<br>⚠️ <b style="color:var(--coral)">이미 Premium 발송됨: ${escapeHtml(record.premium_sent_at)}</b>` : ''}
+  `;
+  document.getElementById('selectedCustomer').classList.add('visible');
+  document.getElementById('searchResults').innerHTML = '';
+
+  // 폼 영역으로 스크롤
+  setTimeout(() => {
+    document.getElementById('generateBtn').scrollIntoView({behavior:'smooth', block:'center'});
+  }, 200);
+}
+
+function clearCustomer(){
+  currentCaseId = ''; currentRowNumber = null;
+  document.getElementById('selectedCustomer').classList.remove('visible');
+  document.getElementById('caseId').value = '';
+  document.getElementById('guestName').value = '';
+  document.getElementById('guestEmail').value = '';
+  document.getElementById('guestAge').value = '';
+  document.getElementById('guestGender').value = '';
+  document.getElementById('guestNationality').value = '';
+  document.getElementById('guestResidence').value = '';
+  document.getElementById('therapistNote').value = '';
+  document.getElementById('extraNote').value = '';
+  // 칩 초기화
+  ['skinTypes','concerns','products','special'].forEach(g => {
+    selections[g] = [];
+    document.querySelectorAll(`#chips${g.charAt(0).toUpperCase()+g.slice(1)} .chip.selected, .chip.selected`).forEach(c => {
+      c.classList.remove('selected','green');
+    });
+  });
+  document.getElementById('skinTypeCount').textContent = '0개 선택';
+  document.getElementById('concernCount').textContent = '0개 선택';
+  document.getElementById('productCount').textContent = '0개 선택';
+  document.querySelectorAll('.lang-item.selected').forEach(b => b.classList.remove('selected'));
+  selectedLang = '';
+  document.getElementById('resultBox').classList.remove('visible');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  UI 헬퍼
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function selectLang(el, v){
+  document.querySelectorAll('.lang-item').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedLang = v;
+}
+
+function toggleChip(el, g){
+  const v = el.textContent.trim();
+  const i = selections[g].indexOf(v);
+  if(i > -1){ selections[g].splice(i,1); el.classList.remove('selected','green'); }
+  else{ selections[g].push(v); el.classList.add('selected','green'); }
+  const m = {skinTypes:'skinTypeCount', concerns:'concernCount', products:'productCount'};
+  if(m[g]) document.getElementById(m[g]).textContent = selections[g].length + '개 선택';
+}
+
+function selectCare(t){
+  careVersion = t;
+  document.getElementById('careBasic').className = 'chip' + (t === 'basic' ? ' selected premium' : '');
+  document.getElementById('carePremium').className = 'chip' + (t === 'premium' ? ' selected premium' : '');
+}
+
+function selectExfo(el, freq){
+  exfoFrequency = freq;
+  document.querySelectorAll('.exfo-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  const m = {'금지':'각질제거 금지','2주 1회':'2주 1회','월 1회':'월 1회 (기본)','2개월 1회':'2개월 1회','분기별 1회':'분기별 1회 (1년 4회)'};
+  document.getElementById('exfoLabel').textContent = m[freq] || freq;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  AI 프롬프트 (기존 v1 그대로 + 테라피스트 노트 통합)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildPrompt(){
+  const name = document.getElementById('guestName').value.trim() || '고객';
+  const age = document.getElementById('guestAge').value;
+  const gender = document.getElementById('guestGender').value;
+  const nationality = document.getElementById('guestNationality').value.trim();
+  const residence = document.getElementById('guestResidence').value.trim();
+  const therapistNote = document.getElementById('therapistNote').value.trim();
+  const extra = document.getElementById('extraNote').value.trim();
+  const closing = document.getElementById('closingMsg').value.trim();
+  const lInfo = langMap[selectedLang] || {inst:'영어로 작성하세요.'};
+
+  let exfoInst = '';
+  if(exfoFrequency === '금지'){
+    exfoInst = '각질제거: 절대 금지. 매뉴얼의 각질제거 가이드 참조.';
+  }else{
+    exfoInst = '각질제거 주기: ' + exfoFrequency + ' (PHA 젤/겔만, 스크럽 금지)';
+  }
+
+  return `당신은 LAUREL STUDIO(서울 홍대)의 피부 전문가입니다.
+핫짱 김하나 대표의 8,000건 실증 데이터와 전문 지식을 바탕으로 작성하세요.
+
+═══════════════════════════════════════════════════════
+【LAUREL STUDIO 전문가 매뉴얼 — 반드시 참조】
+═══════════════════════════════════════════════════════
+${LAUREL_MANUAL}
+═══════════════════════════════════════════════════════
+【매뉴얼 끝】
+═══════════════════════════════════════════════════════
+
+【필수: 출력 언어】
+${lInfo.inst}
+절대 한국어를 섞지 마세요. 해당 언어로만 100% 작성하세요.
+매뉴얼의 "언어별 작성 규칙" 섹션을 반드시 따르세요.
+
+【고객 정보】
+이름: ${name}
+나이대: ${age || '미입력'}
+성별: ${gender || '미입력'}
+국적: ${nationality || selectedLang}
+거주지: ${residence || '미입력'}
+선택된 언어 옵션: ${selectedLang}
+
+피부 특성: ${selections.skinTypes.join(', ') || '일반'}
+주요 고민: ${selections.concerns.join(', ') || '기본 보습'}
+케어 버전: ${careVersion === 'premium' ? '프리미엄 (풀버전)' : '베이직 (간단 버전)'}
+핫짱이 추천하는 제품: ${selections.products.join(', ') || '아토베리어 365 크림 (기본)'}
+특이사항: ${selections.special.join(', ') || '없음'}
+${exfoInst}
+
+【테라피스트 진단 노트 (육안·촉진 결과)】
+${therapistNote || '없음'}
+
+【추가 메모】
+${extra || '없음'}
+
+═══════════════════════════════════════════════════════
+【작성 지시사항】
+═══════════════════════════════════════════════════════
+
+1. **매뉴얼의 매칭 룰 15개를 적용해서 가장 적합한 룰을 선택하세요.**
+   - 고객 정보 + 피부 특성 + 고민 + 나이대를 종합 판단
+   - 여러 룰이 동시 적용 가능 (예: Rule 1 기본 + Rule 4 멜라닌 + Rule 5 50대)
+   - 매칭된 룰에 따라 제품과 단계를 결정
+
+2. **매뉴얼의 12개 메커니즘 중 해당 케이스에 맞는 것만 본문에 포함하세요.**
+   - 모든 메커니즘을 다 쓰지 말 것
+   - 이 고객의 핵심 문제와 직접 관련된 2~4개만 자세히 설명
+   - 비유(물풍선, 냉각수, 아픈 사람+운동 등)를 적극 활용
+
+3. **거주지 기반 UV 환경을 반영하세요.**
+   - 거주지가 "${residence}"인 경우, 매뉴얼의 지역별 UV 특성 참조
+   - 호주/오키나와/싱가포르 → 극강 UV 강조
+   - 영국/네덜란드 → 흐려도 80% UV 침투 강조
+   - 스위스 → 고도 UV 강조
+
+4. **15개 절대 규칙을 반드시 준수하세요.**
+   - 레티놀은 밤만, 선크림 매일, 토너/로션 스킵, 미스트 금지 등
+   - 핫짱이 추천한 제품 사용법은 매뉴얼의 정확한 사용량/순서대로
+
+5. **개인화 포인트:**
+   - 고객 이름을 자주 부르며 따뜻하고 상냥한 톤
+   - 동반자 언급 (모녀/커플/친구 등 - extra 메모 참조)
+   - 핫짱이 지시한 칭찬 포인트 (있다면) 반영
+   - 서울 여행 인사 (해당 시)
+   - 마무리 인사: ${closing ? `반드시 이 문장으로 마무리: "${closing}"` : '따뜻한 응원 메시지'}
+
+6. **문서 포맷은 매뉴얼의 "프리미엄 풀버전" 포맷을 따르세요.**
+   - ✨ Personalized Expert Skin Tips for [이름]
+   - 💧 인사
+   - 📄 The Truth About Your Skin
+   - 🫧 Your Complete Cleansing Routine
+   - 💧 Your Skincare Plan (Month 1, 2+, 3+)
+   - 🌿 Exfoliation
+   - ☀️ Sunscreen (지역별 UV)
+   - 🌿 Initial Redness Note
+   - 📄 Your Routine at a Glance
+   - 📄 What to Expect (타임라인)
+   - 마무리 인사 🤍
+
+7. **각 제품의 정확한 사용량/순서를 매뉴얼대로 명시하세요.**
+   - "two index finger sections" / "thumb section" / "smaller than a millet seed" 등
+   - 역순 레이어링 적용 시 명확히 설명
+   - 레티놀 진행 순서 (3일→2일→매일) 명시
+
+═══════════════════════════════════════════════════════
+【출력 형식】
+═══════════════════════════════════════════════════════
+
+본문을 ${lInfo.label || '해당 언어'}로 작성한 후, 마지막에 구분선과 함께 한국어 요약 추가:
+
+---
+[한국어 요약]
+• 적용된 매칭 룰:
+• 피부 타입:
+• 핵심 메커니즘 (사용된 것):
+• 핵심 루틴:
+• 각질제거 주기: ${exfoFrequency}
+• 추천 제품 (사용량 포함):
+• 주의사항:
+• 지역 UV 노트:`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  HTML 이메일 템플릿 (Bethany/Colleen/Susanne 패턴 기반)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildEmailHtml(name, expertTipsBody){
+  // expertTipsBody는 AI가 생성한 본문 (이미 해당 언어로 작성됨)
+  // HTML 변환: 줄바꿈을 <p>로, 이모지 헤더를 <h3>로
+  const formattedBody = formatTipsToHtml(expertTipsBody);
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{margin:0;padding:0;background:#F4F1EC;font-family:Georgia,'Times New Roman',serif;color:#1C1917;line-height:1.7}
+.container{max-width:600px;margin:0 auto;background:#fff}
+.header-bar{background:#1C1917;color:#fff;padding:24px;text-align:center}
+.header-bar .brand{font-size:11px;letter-spacing:4px;color:#C9A84C;margin-bottom:8px}
+.header-bar .title{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-style:italic}
+.premium-badge{display:inline-block;background:#7A5B9E;color:#fff;font-size:11px;letter-spacing:2px;padding:6px 14px;border-radius:20px;margin-top:12px}
+.content-padding{padding:28px 24px}
+.greeting{font-size:15px;line-height:1.8;margin-bottom:20px}
+.divider{height:1px;background:#E5DDD5;margin:24px 0}
+.summary-box{background:#FAF8F5;border-left:3px solid #C9A84C;padding:14px 18px;margin:18px 0;font-size:14px}
+.tips-section{margin:24px 0}
+.tips-section h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#7A5B9E;margin:24px 0 8px;font-style:italic}
+.tips-section h3{font-size:15px;color:#1C1917;margin:20px 0 8px;font-weight:700}
+.tips-section p{margin:10px 0;font-size:14px;line-height:1.85;color:#3F3A35}
+.next24h{background:#EBF4EE;border-radius:10px;padding:18px 22px;margin:24px 0}
+.next24h .label{font-size:11px;letter-spacing:2px;color:#4A7C59;font-weight:700;margin-bottom:10px}
+.next24h .title{font-size:16px;font-weight:700;margin-bottom:10px}
+.next24h li{font-size:13px;margin:6px 0;list-style:none;padding-left:18px;position:relative}
+.next24h li:before{content:'✦';position:absolute;left:0;color:#4A7C59}
+.upsell-card{background:linear-gradient(135deg,#F0EAF8 0%,#FEF9E4 100%);border:1px solid #C9A84C;border-radius:14px;padding:24px;margin:28px 0;text-align:center}
+.upsell-card .label{font-size:11px;letter-spacing:3px;color:#7A5B9E;font-weight:700;margin-bottom:8px}
+.upsell-card .title{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-style:italic;margin:8px 0}
+.upsell-card .desc{font-size:13px;color:#5A4F45;line-height:1.7;margin:10px 0}
+.upsell-card .price{font-size:20px;font-weight:700;color:#7A5B9E;margin:12px 0}
+.upsell-card .cta{display:inline-block;background:#7A5B9E;color:#fff;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:700;font-size:13px;margin-top:8px}
+.signature{padding:24px;text-align:center;border-top:1px solid #E5DDD5;font-size:12px;color:#7A726A;line-height:1.8}
+.signature .brand{font-size:12px;letter-spacing:3px;color:#1C1917;font-weight:700;margin:14px 0 6px}
+.signature .addr{font-size:11px}
+.closing-italic{font-style:italic;color:#7A726A;text-align:center;padding:18px;font-size:14px;border-top:1px solid #E5DDD5;border-bottom:1px solid #E5DDD5;margin:20px 0}
+</style></head>
+<body>
+<div class="container">
+
+  <div class="header-bar">
+    <div class="brand">LAUREL STUDIO</div>
+    <div style="font-size:10px;letter-spacing:3px;color:#9A9088;margin:4px 0">KOREAN SKINCARE · HONGDAE, SEOUL</div>
+    <div class="title">Personalized Care Summary</div>
+    <div class="premium-badge">PREMIUM CARE</div>
+  </div>
+
+  <div class="content-padding">
+    <div class="greeting">
+      Dear ${escapeHtml(name)}, 🌿<br><br>
+      Thank you for spending time with us at Laurel Studio today. It was a genuine pleasure getting to know your skin — and we hope you felt the difference that a truly personalized care can make.<br><br>
+      Below you'll find everything from today's session: your skin assessment summary, your personalized routine, and our expert tips — crafted specifically for you.
+    </div>
+
+    <div class="summary-box">
+      <div style="font-size:11px;letter-spacing:2px;color:#C9A84C;font-weight:700;margin-bottom:6px">TODAY'S CARE SUMMARY</div>
+      <strong>📋 Program:</strong> Premium Personalized Skincare (60 min)<br><br>
+      <strong>🌿 Products used today:</strong> Please refer to the attached PDF
+    </div>
+
+    <div class="tips-section">
+      ${formattedBody}
+    </div>
+
+    <div class="closing-italic">
+      This routine and these tips are based on your skin assessment today.<br>
+      If something doesn't feel right, reply to this email — we'll adjust.
+    </div>
+
+    <div class="next24h">
+      <div class="label">THE NEXT 24 HOURS</div>
+      <ul>
+        <li>Keep your skin hydrated — drink water, especially after flying.</li>
+        <li>No exfoliation or active ingredients (AHA/BHA, retinol) for 2–3 days.</li>
+        <li>Apply SPF tomorrow — your barrier is freshly treated.</li>
+        <li>If redness or tightness appears, a simple centella cream will calm it.</li>
+      </ul>
+    </div>
+
+    <div class="upsell-card">
+      <div class="label">CONTINUE YOUR SKIN JOURNEY</div>
+      <div style="font-size:12px;color:#5A4F45;margin:8px 0">Your skin doesn't stop changing when you leave Seoul.<br>As a Premium guest, you already have your skin data with us.<br>Every month, we'll send you an updated routine — based on<br>your assessment, the season, and the latest skin science.</div>
+      <div class="title">Monthly Skin Letter — Premium</div>
+      <div class="desc">Personalized routine · Ingredient guide · Skin Science Insight<br>+ Korean product recommendations matched to your skin</div>
+      <div class="price">$19 / month</div>
+      <a href="https://laurelstudio.kr" class="cta">Start My Monthly Skin Letter →</a>
+    </div>
+
+    <div style="text-align:center;font-style:italic;color:#7A726A;font-size:13px;padding:14px 0">
+      It was truly an honor to care for your skin today.<br>
+      We hope to see you again — in Seoul, or in your inbox. 🌿<br><br>
+      Questions anytime? Simply reply to this email.<br><br>
+      <strong style="color:#1C1917;font-style:normal">Hana &amp; the Laurel Studio Team</strong>
+    </div>
+  </div>
+
+  <div class="signature">
+    <div class="brand">LAUREL STUDIO</div>
+    <div class="addr">351-5 Seogyo-dong, Mapo-gu, Seoul 3F</div>
+    <div style="margin-top:8px">@aesthetic_laurel · laurelstudio.kr</div>
+  </div>
+
+</div>
+</body></html>`;
+}
+
+function formatTipsToHtml(text){
+  // 텍스트를 HTML로 변환
+  // 📄 또는 💧 또는 💊 또는 🫧 또는 ☀️ 또는 🌿 또는 ✨ 시작 라인 → h3
+  // 단순 줄바꿈 → <br> 또는 <p>
+  if(!text) return '';
+  const lines = text.split('\n');
+  let html = '';
+  let inParagraph = false;
+  let titleAdded = false;
+
+  for(let line of lines){
+    const trimmed = line.trim();
+    if(!trimmed){
+      if(inParagraph){ html += '</p>'; inParagraph = false; }
+      continue;
+    }
+    // 첫 줄이 ✨로 시작하는 메인 타이틀
+    if(!titleAdded && (trimmed.startsWith('✨') || /^[✨💧]/.test(trimmed))){
+      if(inParagraph){ html += '</p>'; inParagraph = false; }
+      html += `<h2>${escapeHtmlButKeepEmoji(trimmed)}</h2>`;
+      titleAdded = true;
+      continue;
+    }
+    // 섹션 헤더 (이모지로 시작)
+    if(/^[📄💧💊🫧☀️🌿✨🔴🌸💕🤍📋🆔🌍]/.test(trimmed) && trimmed.length < 100){
+      if(inParagraph){ html += '</p>'; inParagraph = false; }
+      html += `<h3>${escapeHtmlButKeepEmoji(trimmed)}</h3>`;
+      continue;
+    }
+    if(!inParagraph){
+      html += '<p>';
+      inParagraph = true;
+    }else{
+      html += '<br>';
+    }
+    html += escapeHtmlButKeepEmoji(trimmed);
+  }
+  if(inParagraph) html += '</p>';
+  return html;
+}
+
+function escapeHtmlButKeepEmoji(s){
+  // HTML 특수문자만 이스케이프, 이모지/유니코드 그대로
+  return String(s||'').replace(/[<>"']/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  진행 표시기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function startProgress(){
+  const b = document.getElementById('progressBar'), f = document.getElementById('progressFill');
+  b.classList.add('visible'); f.style.width = '0%';
+  let p = 0;
+  progressInterval = setInterval(() => {
+    p += Math.random() * 6;
+    if(p > 88) p = 88;
+    f.style.width = p + '%';
+  }, 500);
+}
+
+function endProgress(){
+  clearInterval(progressInterval);
+  const f = document.getElementById('progressFill');
+  f.style.width = '100%';
+  setTimeout(() => {
+    document.getElementById('progressBar').classList.remove('visible');
+    f.style.width = '0%';
+  }, 600);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  메인 생성 함수
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function generateTip(){
+  const name = document.getElementById('guestName').value.trim();
+  const email = document.getElementById('guestEmail').value.trim();
+  if(!name || !email){ alert('이름과 이메일을 입력해주세요!'); return; }
+  if(!selectedLang){ alert('국가/언어를 선택해주세요!'); return; }
+
+  guestNameValue = name;
+  guestEmailValue = email;
+
+  const btn = document.getElementById('generateBtn');
+  const spinner = document.getElementById('spinner');
+  const label = document.getElementById('generateLabel');
+  btn.disabled = true; btn.classList.add('loading');
+  spinner.style.display = 'block';
+  label.textContent = 'AI 생성 중...';
+  startProgress();
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: buildPrompt() }]
+      })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error.message || 'API 오류');
+
+    const full = data.content[0].text;
+    const parts = full.split('---');
+    const mainPart = parts[0].trim();
+    const koPart = parts[1] ? parts[1].replace('[한국어 요약]', '').trim() : '요약 생성 실패';
+
+    generatedMain = mainPart;
+    generatedHtml = buildEmailHtml(name, mainPart);
+
+    // 이메일 미리보기 (iframe에 HTML 주입)
+    const iframe = document.getElementById('emailPreviewFrame');
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open(); doc.write(generatedHtml); doc.close();
+
+    document.getElementById('koText').textContent = koPart;
+    document.getElementById('resultName').textContent = name + ' 고객';
+    const lInfo = langMap[selectedLang] || {flag:'🌍', label:'English'};
+    document.getElementById('langBadge').textContent = lInfo.flag + ' ' + lInfo.label;
+    document.getElementById('resultBox').classList.add('visible');
+    document.getElementById('resultBox').scrollIntoView({behavior:'smooth', block:'start'});
+
+  }catch(e){
+    alert('생성 중 오류가 발생했어요.\n' + e.message);
+  }finally{
+    endProgress();
+    btn.disabled = false; btn.classList.remove('loading');
+    spinner.style.display = 'none';
+    label.textContent = '🔄 다시 생성하기';
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  발송 액션
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function copyEmailHTML(){
+  if(!generatedHtml) return;
+  const btn = document.querySelector('.btn-copy-html');
+  navigator.clipboard.writeText(generatedHtml).then(() => {
+    btn.textContent = '✅ HTML 복사됨';
+    setTimeout(() => btn.textContent = '📋 HTML 본문 복사', 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = generatedHtml;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✅ HTML 복사됨';
+    setTimeout(() => btn.textContent = '📋 HTML 본문 복사', 2500);
+  });
+}
+
+function openGmail(){
+  if(!guestEmailValue) return;
+  const subject = encodeURIComponent('Welcome Seoul, LAUREL STUDIO ✨ — Your Personalized Care Summary');
+  const url = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(guestEmailValue) + '&su=' + subject;
+  window.open(url, '_blank');
+  setTimeout(() => alert('Gmail이 열렸어요!\n\n1. HTML 복사 버튼 누름\n2. Gmail 작성창에서 본문 우클릭 → "서식있는 텍스트로 붙여넣기"\n   (또는 Cmd/Ctrl + Shift + V)\n3. 검토 후 전송\n4. 발송 후 "✅ 발송 완료 기록" 버튼 누르기'), 500);
+}
+
+async function markAsSent(){
+  if(!currentCaseId || !currentRowNumber){
+    document.getElementById('sentStatus').innerHTML = '<span style="color:var(--coral)">⚠ 검색에서 선택한 고객만 발송 기록 가능</span>';
+    return;
+  }
+  const btn = document.querySelector('.btn-mark-sent');
+  btn.disabled = true; btn.textContent = '기록 중...';
+  document.getElementById('sentStatus').innerHTML = '<span style="color:var(--mid)">⏳ 구글시트에 발송 완료 기록 중...</span>';
+
+  // CARE_Data의 해당 row에 premium_sent_at 컬럼 업데이트
+  // update 액션은 모든 컬럼을 다시 써야 하므로, 일단 새 row로 발송 로그를 남기는 방식이 더 안전함
+  // 여기서는 별도 시트("Premium_Sent_Log")에 append하는 방식 사용 (단순함)
+  const payload = {
+    section: 'CARE',
+    case_id: currentCaseId,
+    client_email: guestEmailValue,
+    client_name: guestNameValue,
+    visit_date: new Date().toISOString().split('T')[0],
+    therapist_name: 'Hana',
+    care_summary: `[PREMIUM SENT] ${new Date().toISOString()} via Expert Tip Generator v2`,
+    tp_notes: `Premium email sent to ${guestEmailValue} on ${new Date().toLocaleString('ko-KR')}`
+  };
+
+  try{
+    const url = WEBHOOK + '?data=' + encodeURIComponent(JSON.stringify(payload));
+    const resp = await fetch(url, {method:'GET', redirect:'follow'});
+    const text = await resp.text();
+    const data = JSON.parse(text);
+    if(data.status === 'ok'){
+      document.getElementById('sentStatus').innerHTML = `<span style="color:var(--green)">✓ 발송 완료 기록됨 (row ${data.row})</span>`;
+      btn.textContent = '✓ 발송 기록됨';
+      btn.style.background = 'var(--green)';
+    }else{
+      throw new Error(data.message || '저장 실패');
+    }
+  }catch(err){
+    document.getElementById('sentStatus').innerHTML = `<span style="color:var(--coral)">⚠ ${err.message}</span>`;
+    btn.disabled = false; btn.textContent = '✅ 발송 완료 기록';
+  }
+}
+</script>
+</body>
+</html>
