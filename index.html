@@ -123,6 +123,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);background:#ff
 .btn-copy-text{background:var(--mid)}
 .btn-gmail{background:var(--dark)}
 .btn-mark-sent{background:var(--premium)}
+.genmode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.genmode button{padding:12px 10px;border:1.5px solid var(--border);background:#fff;border-radius:10px;
+  font-family:inherit;font-size:13px;cursor:pointer;color:var(--mid);line-height:1.35}
+.genmode button small{display:block;font-size:10px;opacity:.75;margin-top:2px}
+.genmode button.on{border-color:var(--premium);background:var(--premium-bg);color:var(--premium);font-weight:700}
+.genhint{font-size:11.5px;color:var(--mid);line-height:1.6;margin:8px 2px}
+.pastein{width:100%;min-height:150px;padding:12px;border:1.5px solid var(--border);border-radius:10px;
+  font-family:inherit;font-size:12.5px;line-height:1.6;margin-bottom:10px;resize:vertical}
+.keyin{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;
+  font-family:inherit;font-size:13px;margin-bottom:10px}
 .btn-action:active{opacity:.85}
 .btn-action:disabled{opacity:.5;cursor:not-allowed}
 
@@ -381,10 +391,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);background:#ff
   <div class="tip-note">💡 국가 선택 시 해당 언어로 자동 출력됩니다. 트리넥삼산 선택 시 전문의 상담 안내가 자동 포함됩니다. CARE_Data에서 자동 채워진 정보를 검토 후 필요시 수정하세요.</div>
 
   <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-  <button class="btn-generate" id="generateBtn" onclick="generateTip()">
-    <div class="spinner" id="spinner"></div>
-    <span id="generateLabel">✨ 전문가팁 생성 + 이메일 조립</span>
-  </button>
+  <div class="genmode">
+    <button id="modePaste" class="on" onclick="setMode('paste')">📋 클로드에 붙여넣기 <small>구독으로 그냥 씀</small></button>
+    <button id="modeApi" onclick="setMode('api')">⚡ 자동 생성 <small>API 키 필요</small></button>
+  </div>
+
+  <div id="pasteBox">
+    <button class="btn-generate" onclick="copyPrompt()">📋 1. 프롬프트 복사 → 클로드에 붙여넣기</button>
+    <div class="genhint" id="promptHint">
+      복사한 뒤 claude.ai 에 붙여넣고, 나온 답을 통째로 아래 칸에 붙여넣으세요.
+    </div>
+    <textarea id="pasteIn" class="pastein" placeholder="클로드가 써준 전문가팁을 여기에 통째로 붙여넣으세요 (한국어 요약까지 같이)"></textarea>
+    <button class="btn-generate" onclick="useePasted()">✨ 2. 이메일로 조립하기</button>
+  </div>
+
+  <div id="apiBox" style="display:none">
+    <div class="genhint">
+      API 키는 <b>이 브라우저에만</b> 저장됩니다. 깃허브 파일에는 들어가지 않습니다.
+    </div>
+    <input type="password" id="apiKey" class="keyin" placeholder="sk-ant-... (한 번만 넣으면 기억합니다)">
+    <button class="btn-generate" id="generateBtn" onclick="generateTip()">
+      <div class="spinner" id="spinner"></div>
+      <span id="generateLabel">✨ 전문가팁 생성 + 이메일 조립</span>
+    </button>
+  </div>
 
   <!-- 결과 -->
   <div class="result-box" id="resultBox">
@@ -1285,11 +1315,71 @@ function endProgress(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  메인 생성 함수
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let GEN_MODE = 'paste';
+window.setMode = (m) => {
+  GEN_MODE = m;
+  document.getElementById('modePaste').className = m==='paste'?'on':'';
+  document.getElementById('modeApi').className   = m==='api'?'on':'';
+  document.getElementById('pasteBox').style.display = m==='paste'?'':'none';
+  document.getElementById('apiBox').style.display   = m==='api'?'':'none';
+  try { localStorage.setItem('laurel_genmode', m); } catch(e){}
+};
+
+/* 프롬프트만 복사합니다 — 구독 중인 클로드에 그대로 붙여넣으면 됩니다 */
+window.copyPrompt = async () => {
+  const name  = document.getElementById('guestName').value.trim();
+  const email = document.getElementById('guestEmail').value.trim();
+  if(!name || !email){ alert('이름과 이메일을 입력해주세요!'); return; }
+  if(!selectedLang){ alert('국가/언어를 선택해주세요!'); return; }
+  guestNameValue = name; guestEmailValue = email;
+  const txt = buildPrompt();
+  try { await navigator.clipboard.writeText(txt); }
+  catch(e){
+    const ta=document.createElement('textarea'); ta.value=txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  document.getElementById('promptHint').innerHTML =
+    '✅ <b>복사했습니다</b> (' + txt.length.toLocaleString() + '자). claude.ai 에 붙여넣고, 나온 답을 통째로 아래 칸에 넣으세요.';
+};
+
+/* 클로드가 써준 글을 이메일로 조립합니다 */
+window.useePasted = () => {
+  const name  = document.getElementById('guestName').value.trim();
+  const email = document.getElementById('guestEmail').value.trim();
+  const raw   = document.getElementById('pasteIn').value.trim();
+  if(!name || !email){ alert('이름과 이메일을 입력해주세요!'); return; }
+  if(!raw){ alert('클로드가 써준 글을 붙여넣어 주세요!'); return; }
+  guestNameValue = name; guestEmailValue = email;
+  showResult(name, raw);
+};
+
+/* 생성 결과를 화면에 올립니다 (붙여넣기·API 공통) */
+function showResult(name, full){
+  const parts = full.split('---');
+  const mainPart = parts[0].trim();
+  const koPart = parts[1] ? parts[1].replace('[한국어 요약]', '').trim() : '요약 없음';
+  generatedMain = mainPart;
+  generatedHtml = buildEmailHtml(name, mainPart);
+  const iframe = document.getElementById('emailPreviewFrame');
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(generatedHtml); doc.close();
+  document.getElementById('koText').textContent = koPart;
+  document.getElementById('resultName').textContent = name + ' 고객';
+  const lInfo = langMap[selectedLang] || {flag:'🌍', label:'English'};
+  document.getElementById('langBadge').textContent = lInfo.flag + ' ' + lInfo.label;
+  document.getElementById('resultBox').classList.add('visible');
+  document.getElementById('resultBox').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 async function generateTip(){
   const name = document.getElementById('guestName').value.trim();
   const email = document.getElementById('guestEmail').value.trim();
   if(!name || !email){ alert('이름과 이메일을 입력해주세요!'); return; }
   if(!selectedLang){ alert('국가/언어를 선택해주세요!'); return; }
+
+  const key = (document.getElementById('apiKey').value || '').trim();
+  if(!key){ alert('API 키를 넣어주세요. (sk-ant- 로 시작합니다)'); return; }
+  try { localStorage.setItem('laurel_apikey', key); } catch(e){}
 
   guestNameValue = name;
   guestEmailValue = email;
@@ -1303,11 +1393,17 @@ async function generateTip(){
   startProgress();
 
   try{
+    /* ★ 예전에는 이 세 줄이 빠져 있어서 무조건 실패했습니다 */
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5-5',
         max_tokens: 4000,
         messages: [{ role: 'user', content: buildPrompt() }]
       })
@@ -1315,25 +1411,7 @@ async function generateTip(){
     const data = await r.json();
     if(data.error) throw new Error(data.error.message || 'API 오류');
 
-    const full = data.content[0].text;
-    const parts = full.split('---');
-    const mainPart = parts[0].trim();
-    const koPart = parts[1] ? parts[1].replace('[한국어 요약]', '').trim() : '요약 생성 실패';
-
-    generatedMain = mainPart;
-    generatedHtml = buildEmailHtml(name, mainPart);
-
-    // 이메일 미리보기 (iframe에 HTML 주입)
-    const iframe = document.getElementById('emailPreviewFrame');
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open(); doc.write(generatedHtml); doc.close();
-
-    document.getElementById('koText').textContent = koPart;
-    document.getElementById('resultName').textContent = name + ' 고객';
-    const lInfo = langMap[selectedLang] || {flag:'🌍', label:'English'};
-    document.getElementById('langBadge').textContent = lInfo.flag + ' ' + lInfo.label;
-    document.getElementById('resultBox').classList.add('visible');
-    document.getElementById('resultBox').scrollIntoView({behavior:'smooth', block:'start'});
+    showResult(name, data.content[0].text);
 
   }catch(e){
     alert('생성 중 오류가 발생했어요.\n' + e.message);
@@ -1381,18 +1459,16 @@ async function markAsSent(){
   btn.disabled = true; btn.textContent = '기록 중...';
   document.getElementById('sentStatus').innerHTML = '<span style="color:var(--mid)">⏳ 구글시트에 발송 완료 기록 중...</span>';
 
-  // CARE_Data의 해당 row에 premium_sent_at 컬럼 업데이트
-  // update 액션은 모든 컬럼을 다시 써야 하므로, 일단 새 row로 발송 로그를 남기는 방식이 더 안전함
-  // 여기서는 별도 시트("Premium_Sent_Log")에 append하는 방식 사용 (단순함)
+  /* ★ action 을 빼면 앱스스크립트가 \"새 줄 추가\"로 알아듣습니다.
+     예전에는 이 버튼을 누를 때마다 CARE_Data 에 빈 줄이 하나씩 생겼습니다.
+     이제는 그 손님 줄(_row_number)의 premium_sent_at 칸만 고칩니다.
+     앱스스크립트의 update 는 보존형이라 다른 칸은 건드리지 않습니다. */
   const payload = {
+    action: 'update',
     section: 'CARE',
+    _row_number: currentRowNumber,
     case_id: currentCaseId,
-    client_email: guestEmailValue,
-    client_name: guestNameValue,
-    visit_date: new Date().toISOString().split('T')[0],
-    therapist_name: 'Hana',
-    care_summary: `[PREMIUM SENT] ${new Date().toISOString()} via Expert Tip Generator v2`,
-    tp_notes: `Premium email sent to ${guestEmailValue} on ${new Date().toLocaleString('ko-KR')}`
+    premium_sent_at: new Date().toLocaleString('ko-KR') + ' → ' + guestEmailValue
   };
 
   try{
@@ -1401,6 +1477,7 @@ async function markAsSent(){
     const text = await resp.text();
     const data = JSON.parse(text);
     if(data.status === 'ok'){
+      try { localStorage.setItem('laurel_sent_' + currentCaseId, Date.now()); } catch(e){}
       document.getElementById('sentStatus').innerHTML = `<span style="color:var(--green)">✓ 발송 완료 기록됨 (row ${data.row})</span>`;
       btn.textContent = '✓ 발송 기록됨';
       btn.style.background = 'var(--green)';
@@ -1412,6 +1489,13 @@ async function markAsSent(){
     btn.disabled = false; btn.textContent = '✅ 발송 완료 기록';
   }
 }
+
+/* 저장해둔 설정 불러오기 */
+try {
+  const k = localStorage.getItem('laurel_apikey');
+  if (k) document.getElementById('apiKey').value = k;
+  setMode(localStorage.getItem('laurel_genmode') || 'paste');
+} catch(e){ try { setMode('paste'); } catch(e2){} }
 </script>
 </body>
 </html>
